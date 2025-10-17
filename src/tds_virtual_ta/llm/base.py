@@ -1,6 +1,11 @@
 
+"""
+src/tds_virtual_ta/llm/base.py
+FIXED - Correct system prompt for static sites
+"""
+
 from abc import ABC, abstractmethod
-from typing import Optional, Dict
+from typing import Optional
 from ..models import LLMGenerationRequest, LLMGenerationResponse
 
 
@@ -19,13 +24,12 @@ class BaseLLMAdapter(ABC):
         request: LLMGenerationRequest
     ) -> LLMGenerationResponse:
         """
-        Generate complete application code.
+        Generate complete static web application.
         
         Must generate:
-        - index.html
+        - index.html (self-contained with embedded CSS/JS)
         - README.md
         - LICENSE
-        - Any additional static assets
         """
         pass
     
@@ -36,18 +40,28 @@ class BaseLLMAdapter(ABC):
     
     def _create_system_prompt(self) -> str:
         """Create system prompt for static site generation."""
-        return """You are an expert web developer specializing in creating static websites. 
-        Your task is to generate production-ready static sites based on user requirements.
+        return """You are an expert front-end web developer specializing in creating production-ready static web applications using HTML, CSS, and JavaScript.
 
-Your task is to generate production-ready code based on user requirements. You must:
+Your expertise includes:
+- Writing clean, semantic HTML5
+- Modern CSS3 with responsive design
+- Vanilla JavaScript for interactivity
+- Using CDN libraries (Bootstrap, jQuery, marked, highlight.js, etc.)
+- Client-side data processing (CSV, JSON, images)
+- Accessibility and cross-browser compatibility
+- Professional UI/UX design principles
 
-1. Write clean, well-documented Python code
-2. Include all necessary dependencies in requirements.txt
-3. Create a working Dockerfile for deployment
-4. Follow best practices for security and performance
-5. Make the application user-friendly and robust
+CRITICAL RULES:
+1. Generate ONLY static files - NO server-side code
+2. Create self-contained HTML with embedded CSS and JavaScript
+3. Use CDN for all external libraries (Bootstrap 5, etc.)
+4. Ensure code works when opened directly in a browser
+5. Meet ALL specified evaluation criteria
+6. Include proper error handling
+7. Write clean, commented, production-ready code
+8. Make responsive, professional-looking interfaces
 
-IMPORTANT: Generate ONLY the requested files. Do not include explanations or markdown formatting outside of code comments."""
+OUTPUT: Only the requested files with === filename === markers. No explanations outside code."""
 
 
 class LLMGenerationError(Exception):
@@ -58,4 +72,3 @@ class LLMGenerationError(Exception):
         self.provider = provider
         self.model = model
         super().__init__(f"[{provider}/{model}] {message}")
-

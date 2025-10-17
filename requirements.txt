@@ -1,0 +1,39 @@
+# Core Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.11.9
+pydantic-settings==2.1.0
+
+# HTTP Client
+httpx==0.28.1
+
+# GitHub Integration
+PyGithub==2.1.1
+
+# Environment Management
+python-dotenv==1.1.1
+
+openai==1.109.1
+
+# Retry Logic
+tenacity==8.2.3
+
+# HuggingFace (for Inference API fallback)
+huggingface-hub==0.20.3
+
+# Security
+cryptography==42.0.0
+
+# Logging
+python-json-logger==2.0.7
+
+# Date/Time
+python-dateutil==2.8.2
+
+# YAML
+PyYAML==6.0.1
+
+# Email validation
+email-validator==2.1.0
+
+cryptography==42.0.0

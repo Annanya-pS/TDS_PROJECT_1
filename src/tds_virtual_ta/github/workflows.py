@@ -1,9 +1,14 @@
-﻿from typing import Dict
+"""
+src/tds_virtual_ta/github/workflows.py
+FIXED - Correct workflows for static HTML sites
+"""
+
+from typing import Dict
 
 
-def generate_pages_workflow(framework: str = "gradio") -> str:
-    """Generate GitHub Actions workflow for GitHub Pages deployment (static, dependency-free)."""
-    return f"""name: Deploy to GitHub Pages
+def generate_pages_workflow() -> str:
+    """Generate GitHub Actions workflow for GitHub Pages deployment (static HTML)."""
+    return """name: Deploy Static Site to GitHub Pages
 
 on:
   push:
@@ -20,84 +25,112 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
       
-      - name: Prepare static site
-        run: |
-          mkdir -p _site
-          if [ -f index.html ]; then
-            cp index.html _site/index.html
-          else
-            echo "<html><body><h1>Application Deployed</h1>" > _site/index.html
-            echo "<p>This {framework} application is deployed.</p>" >> _site/index.html
-            echo "<p><a href='https://github.com/${{{{ github.repository }}}}'>View Source</a></p>" >> _site/index.html
-            echo "</body></html>" >> _site/index.html
-          fi
-          cp -r assets _site/assets 2>/dev/null || true
-          cp README.md _site/ 2>/dev/null || true
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
       
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: '_site'
-  
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{{{ steps.deployment.outputs.page_url }}}}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
+          path: '.'
+      
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v3
+        uses: actions/deploy-pages@v4
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 """
 
 
 def generate_ci_workflow() -> str:
-    """Generate CI workflow for testing and linting (robust to missing Python files)."""
-    return """name: CI
+    """Generate CI workflow for basic validation."""
+    return """name: CI Validation
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  test:
+  validate:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
       
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-      
-      - name: Install dependencies (if present)
+      - name: Validate HTML
         run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install flake8 || true
+          if [ ! -f index.html ]; then
+            echo "ERROR: index.html not found!"
+            exit 1
+          fi
+          echo "✓ index.html exists"
       
-      - name: Lint with flake8
+      - name: Validate README
         run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
+          if [ ! -f README.md ]; then
+            echo "ERROR: README.md not found!"
+            exit 1
+          fi
+          echo "✓ README.md exists"
       
-      - name: Basic repository check
+      - name: Validate LICENSE
         run: |
-          if [ -f index.html ]; then echo "index.html present"; else echo "index.html missing"; fi
+          if [ ! -f LICENSE ]; then
+            echo "ERROR: LICENSE not found!"
+            exit 1
+          fi
+          if ! grep -q "MIT License" LICENSE; then
+            echo "ERROR: LICENSE is not MIT!"
+            exit 1
+          fi
+          echo "✓ LICENSE is MIT"
+      
+      - name: Check HTML structure
+        run: |
+          if ! grep -q "<!DOCTYPE html>" index.html; then
+            echo "WARNING: Missing DOCTYPE declaration"
+          fi
+          if ! grep -q "<html" index.html; then
+            echo "ERROR: Invalid HTML structure"
+            exit 1
+          fi
+          echo "✓ HTML structure valid"
+      
+      - name: Check Bootstrap CDN
+        run: |
+          if grep -q "bootstrap" index.html; then
+            echo "✓ Bootstrap detected"
+          else
+            echo "WARNING: Bootstrap not found (may not be required)"
+          fi
+      
+      - name: Summary
+        run: |
+          echo "========================================"
+          echo "Repository validation completed"
+          echo "========================================"
+          echo "Files checked:"
+          ls -lh index.html README.md LICENSE
+          echo ""
+          echo "HTML file size:"
+          wc -c index.html | awk '{print $1 " bytes"}'
 """
 
 
-def get_all_workflows(framework: str = "gradio") -> Dict[str, str]:
-    """Get all workflow files."""
+def get_all_workflows() -> Dict[str, str]:
+    """Get all workflow files for static site deployment."""
     return {
-        ".github/workflows/pages.yml": generate_pages_workflow(framework),
+        ".github/workflows/pages.yml": generate_pages_workflow(),
         ".github/workflows/ci.yml": generate_ci_workflow(),
     }

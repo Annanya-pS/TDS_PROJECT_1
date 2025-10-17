@@ -59,9 +59,19 @@ DESIGN GUIDELINES:
 
 DATA HANDLING:
 - For attachments: Use the data URI directly or decode base64 inline
-- For CSV/JSON: Parse client-side using JavaScript
+- For CSV/JSON: Parse client-side using JavaScript (Papa Parse for CSV)
+- For Markdown: Use marked.js to convert to HTML, highlight.js for code syntax
 - For images: Use img src with data URI or embed inline
 - Store temporary data in JavaScript variables (NO localStorage/sessionStorage)
+- For ?url= parameters: Use fetch() API to load external content
+
+COMMON CDN LIBRARIES:
+- Bootstrap 5: https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css
+- marked.js: https://cdn.jsdelivr.net/npm/marked/marked.min.js
+- highlight.js: https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js
+- highlight.js CSS: https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css
+- Chart.js: https://cdn.jsdelivr.net/npm/chart.js
+- Papa Parse: https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js
 
 OUTPUT FORMAT (CRITICAL - Follow exactly):
 

@@ -1,15 +1,16 @@
 """
 src/tds_virtual_ta/worker.py
-FIXED - Corrected imports and syntax errors
+FINAL VERSION - Sanitized repo description
 """
 
 import asyncio
 import time
 import httpx
 import base64
+import re
 from typing import Dict
 
-from .config import settings  # ✅ FIXED: Import settings instance, not Settings class
+from .config import settings
 from .models import TaskRequest, EvaluationResult, LLMGenerationRequest
 from .llm.aipipe import AIPipeLLMAdapter
 from .llm.huggingface import HuggingFaceLLMAdapter
@@ -18,6 +19,22 @@ from .github.manager import GitHubManager
 from .utils.logging_config import TaskLogger, get_logger
 
 logger = get_logger(__name__)
+
+
+def sanitize_description(text: str, max_length: int = 100) -> str:
+    """
+    Sanitize text for GitHub repo description.
+    Remove control characters, newlines, tabs.
+    """
+    # Replace newlines and tabs with spaces
+    text = text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+    # Remove other control characters
+    text = re.sub(r'[\x00-\x1F\x7F]', '', text)
+    # Collapse multiple spaces
+    text = re.sub(r'\s+', ' ', text)
+    # Trim and limit length
+    text = text.strip()[:max_length]
+    return text
 
 
 async def process_task(request: TaskRequest):
@@ -30,7 +47,7 @@ async def process_task(request: TaskRequest):
     try:
         result = await asyncio.wait_for(
             _process_task_internal(request, task_logger),
-            timeout=300  # 5 minutes
+            timeout=570  # 9.5 minutes
         )
         
         await post_to_evaluation_url(
@@ -70,7 +87,6 @@ async def _process_task_internal(
         task_logger.info("Round 2+: Fetching existing code")
         github_manager = GitHubManager()
         try:
-            # Task ID = repo name per specs
             existing_code = github_manager.get_file_content(request.task, "index.html")
         except Exception as e:
             task_logger.warning(f"Could not fetch existing code: {e}")
@@ -120,11 +136,16 @@ async def _process_task_internal(
     # IMPORTANT: Use task ID as repo name (per specs)
     repo_name = request.task  # e.g., "captcha-solver-a1b2c"
     
+    # ✅ FIX: Sanitize description to remove control characters
+    safe_description = sanitize_description(
+        f"TDS Project Round {request.round}: {request.brief}"
+    )
+    
     github_manager = GitHubManager()
     
     repo_info = github_manager.create_or_get_repository(
         repo_name=repo_name,
-        description=f"TDS Project Round {request.round}: {request.brief[:100]}",
+        description=safe_description,  # ✅ Now sanitized
         private=False  # Must be public
     )
     
@@ -183,7 +204,10 @@ async def post_to_evaluation_url(
     task_logger: TaskLogger,
     max_retries: int = 5
 ):
-    """POST result with exponential backoff: 1, 2, 4, 8 seconds."""
+    """
+    POST result with exponential backoff: 1, 2, 4, 8, 16 seconds.
+    Spec-compliant retry timing.
+    """
     
     task_logger.info(f"Posting result to: {evaluation_url}")
     
@@ -206,8 +230,7 @@ async def post_to_evaluation_url(
             except Exception as e:
                 task_logger.error(f"POST attempt {attempt + 1} failed: {e}")
             
-            # ✅ FIXED: Proper indentation and syntax
-            # Reduced backoff: 0.5, 1, 1.5, 2 seconds
+            # Exponential backoff: 1, 2, 4, 8, 16 seconds
             if attempt < max_retries - 1:
                 delay = 2 ** attempt
                 task_logger.info(f"Retrying in {delay}s...")
@@ -224,7 +247,6 @@ def _parse_data_uri(data_uri: str) -> str:
         return ""
     if not data_uri.startswith("data:"):
         return data_uri
-    
     
     try:
         # Format: data:mime/type;base64,encoded_data
